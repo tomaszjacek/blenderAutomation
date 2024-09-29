@@ -477,8 +477,13 @@ class DexiNedTj(tf.keras.Model):
         self.transpoze2D_6 = Conv2DTranspose(16 , kernel_size=(16,16),strides=(2,2),padding = 'same')
         self.conv2D_46 = Conv2D(1 , kernel_size=(1,1),strides=(1,1),padding = 'same',use_bias=True)
         self.transpoze2D_1 = Conv2DTranspose(1 , kernel_size=(16,16),strides=(2,2),padding = 'same')
+        #self.block_cat = SingleConvBlock(
+        #    1,k_size=(1,1),stride=(1,1),
+        #    w_init=tf.constant_initializer(1/5))
 
-
+        self.last_conv = Conv2D(1, kernel_size=(1,1), strides=(1,1), padding = 'same', kernel_initializer=tf.constant_initializer(1/5))
+        self.last_batchnormalization = BatchNormalization()
+        self.last_activation = Activation(activation='relu')
 
     def call(self, x):
         x = x-self.rgbn_mean[:-1]
@@ -618,6 +623,21 @@ class DexiNedTj(tf.keras.Model):
         transpoze2D_6 = self.transpoze2D_6(conv2D_9)
         conv2D_46 = self.conv2D_46(transpoze2D_6)
         transpoze2D_1 = self.transpoze2D_1(conv2D_46)
-        concatenate_1 = Concatenate()([transpoze2D_1,transpoze2D_2,transpoze2D_9,transpoze2D_10,transpoze2D_13,transpoze2D_14])
+        tmp = [transpoze2D_1,transpoze2D_2,transpoze2D_9,transpoze2D_10,transpoze2D_13,transpoze2D_14]
+        concatenate_1 = tf.concat(tmp,3)
+        #print(f"concatenate_1 shape: {concatenate_1.shape}")
+        #return concatenate_1
 
-        return concatenate_1
+        #results = [transpoze2D_1,transpoze2D_2,transpoze2D_9,transpoze2D_10,transpoze2D_13,transpoze2D_14]
+        #block_cat = tf.concat(results, 3)  # BxHxWX6
+        #print(f"CONCATENATE_1 shape: {block_cat.shape}")
+        #block_cat = self.block_cat(block_cat)  # BxHxWX1
+        #results.append(block_cat)
+
+
+        last_conv =self.last_conv(concatenate_1)
+        last_batchnormalization = self.last_batchnormalization(last_conv)
+        last_activation = self.last_activation(last_batchnormalization)
+        print(f"LAST_ACTIVATION shape: {last_activation.shape}")
+        tmp.append(last_activation)
+        return tmp
