@@ -8,11 +8,11 @@ import os  # For file path operations
 
 # Addon metadata and registration information
 bl_info = {
-    "name": "Devin Outlined Deeplearning Generator",
+    "name": "Outlined Deeplearning Generator",
     "author": "Your Name",
     "version": (1, 0),
     "blender": (2, 80, 0),
-    "location": "View3D > Sidebar > Devin Generator",
+    "location": "View3D > Sidebar > Outline Generator",
     "description": "Generate random object configurations and render images",
     "category": "3D View",
 }
@@ -25,7 +25,12 @@ class OBJECT_OT_add_plane(Operator):
 
     def execute(self, context):
         """Add a plane at a specific location"""
-        bpy.ops.mesh.primitive_plane_add(location=(7, 7, 0))
+        bpy.ops.mesh.primitive_plane_add(location=(0, 0, 0))
+        bpy.context.object.location[0] = 0
+        bpy.context.object.location[1] = 0
+        bpy.context.object.location[2] = 0
+        bpy.ops.transform.resize(value=(10, 10, 10), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
+
         return {'FINISHED'}
 
 class OBJECT_OT_add_camera(Operator):
@@ -39,6 +44,13 @@ class OBJECT_OT_add_camera(Operator):
         bpy.ops.object.camera_add(location=(0, 0, 5))
         camera = context.active_object
         camera.location.z = 5  # Ensure Z location is exactly 5
+        bpy.context.object.rotation_euler[0] = 0
+        bpy.context.object.rotation_euler[1] = 0
+        bpy.context.object.rotation_euler[2] = 0
+
+
+        bpy.ops.object.light_add(type='SUN', radius=1, align='WORLD', location=(0, 0, 6), scale=(1, 1, 1))
+
         return {'FINISHED'}
 
 class OBJECT_OT_generate_data(Operator):
@@ -55,6 +67,10 @@ class OBJECT_OT_generate_data(Operator):
 
     def execute(self, context):
         scene = context.scene
+
+        if "data" in bpy.data.objects:
+            bpy.data.collections.remove(bpy.data.collections["data"], do_unlink=True)
+
         # Create a new collection to hold the generated objects
         data_collection = bpy.data.collections.new("data")
         scene.collection.children.link(data_collection)
@@ -77,6 +93,7 @@ class OBJECT_OT_generate_data(Operator):
                     # Add the object to the scene
                     add_func()
                     obj = context.active_object
+                    bpy.ops.transform.resize(value=(0.0783816, 0.0783816, 0.0783816), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
 
                     # Ensure the object is linked to the scene collection
                     if obj.name not in scene.collection.objects:
@@ -117,6 +134,16 @@ class OBJECT_OT_generate_images(Operator):
         data_collection = bpy.data.collections.get("data")
         camera = bpy.data.objects.get("Camera")
 
+        train_path = os.path.join(scene.photo_path, "train")
+        if not os.path.exists(train_path):
+            os.makedirs(train_path)
+        trainx_path = os.path.join(train_path, "x")
+        if not os.path.exists(trainx_path):
+            os.makedirs(trainx_path)
+        trainy_path = os.path.join(train_path, "y")
+        if not os.path.exists(trainy_path):
+            os.makedirs(trainy_path)
+
         # Check if required objects exist
         if not data_collection or not camera:
             self.report({'ERROR'}, "Data collection or camera not found")
@@ -134,7 +161,19 @@ class OBJECT_OT_generate_images(Operator):
 
             # Set up the render
             scene.camera = camera
-            filepath = os.path.join(scene.photo_path, f"render_{step:03d}.png")
+            filepath = ""
+            #bpy.context.space_data.context = 'TOOL'
+            #bpy.context.space_data.context = 'RENDER'
+            bpy.context.scene.render.use_freestyle = True
+
+            filepath = os.path.join(trainx_path, f"render_{step:03d}.png")
+            scene.render.filepath = filepath
+            # Perform the render and save the image
+            bpy.ops.render.render(write_still=True)
+
+
+            bpy.context.scene.render.use_freestyle = False
+            filepath = os.path.join(trainy_path, f"render_{step:03d}.png")
             scene.render.filepath = filepath
             # Perform the render and save the image
             bpy.ops.render.render(write_still=True)
