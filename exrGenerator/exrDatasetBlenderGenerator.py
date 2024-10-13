@@ -1,6 +1,6 @@
 
 bl_info = {
-    "name": "GPT EXR Generator",
+    "name": "GPT EXR Generator" ,
     "blender": (3, 0, 0),
     "category": "Object",
 }
@@ -119,16 +119,23 @@ class GPTExrGeneratorPanel(bpy.types.Panel):
 class CreateExrDataOperator(bpy.types.Operator):
     bl_idname = "object.create_exr_data"
     bl_label = "Create Brush In Lib Folder"
+    
 
+    
     def execute(self, context):
         props = context.scene.gpt_exr_generator
-        #bpy.data.filepath = props.random_brush_lib_path
+        #bpy.context.scene.render.filepath = props.random_brush_lib_path
+        bpy.data.is_saved=True
+        bpy.data.filepath = props.random_brush_lib_path
         # Create VDM brush (pseudo-code, actual implementation may vary)
         # create_vdm_brush(step, exr_data_folder)
         bpy.ops.vdmbrush.create()
-        exr_path = props.random_brush_lib_path
-        
-        bpy.ops.image.save_as(save_as_render=False, filepath=exr_path +"/"+get_add.draft_brush_name+".exr", relative_path=False, show_multiview=False, use_multiview=False)
+        exr_path = props.random_brush_lib_path + bpy.context.scene.VDMBrushBakerAddonData.draft_brush_name +".exr"
+        print("EXR_PATH "+ exr_path)
+        bpy.ops.render.render(write_still=True)
+        bpy.ops.image.save_as(save_as_render=False, filepath=exr_path , relative_path=False, show_multiview=False, use_multiview=False)
+        #bpy.ops.image.save_as(save_as_render=False, copy=False, filepath=exr_path, check_existing=True, filter_blender=False, filter_backup=False, filter_image=True, filter_movie=True, filter_python=False, filter_font=False, filter_sound=False, filter_text=False, filter_btx=False, filter_collada=False, filter_alembic=False, filter_folder=True, filter_blenlib=False, filemode=9, relative_path=True, show_multiview=False, use_multiview=False, display_type='DEFAULT', sort_method='FILE_SORT_ALPHA')
+
 
 class GenerateRandomBrushLibOperator(bpy.types.Operator):
     bl_idname = "object.generate_random_brush_lib"
