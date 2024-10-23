@@ -53,6 +53,11 @@ class OBJECT_OT_add_camera(Operator):
 
         return {'FINISHED'}
 
+def get_random_color():
+    ''' generate rgb using a list comprehension '''
+    r, g, b = [random.random() for i in range(3)]
+    return r, g, b, 1
+
 class OBJECT_OT_generate_data(Operator):
     """
     Operator to generate a collection of random 3D objects.
@@ -65,6 +70,8 @@ class OBJECT_OT_generate_data(Operator):
     bl_label = "Generate Data"
     bl_options = {'REGISTER', 'UNDO'}
 
+
+    
     def execute(self, context):
         scene = context.scene
 
@@ -86,6 +93,7 @@ class OBJECT_OT_generate_data(Operator):
         object_count = 0
 
         try:
+            
             while object_count < scene.number_of_objects:
                 for obj_type, add_func in object_types:
                     if object_count >= scene.number_of_objects:
@@ -93,8 +101,12 @@ class OBJECT_OT_generate_data(Operator):
                     # Add the object to the scene
                     add_func()
                     obj = context.active_object
-                    bpy.ops.transform.resize(value=(0.0783816, 0.0783816, 0.0783816), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
-
+                    bpy.ops.transform.resize(value=(0.4783816, 0.4783816, 0.4783816), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
+                    bpy.ops.object.material_slot_add()
+                    mat = bpy.data.materials.new("My Material")
+                    mat.diffuse_color = get_random_color()
+                    #obj.data.materials.append(mat)
+                    obj.material_slots[0].material = mat
                     # Ensure the object is linked to the scene collection
                     if obj.name not in scene.collection.objects:
                         scene.collection.objects.link(obj)
@@ -154,8 +166,8 @@ class OBJECT_OT_generate_images(Operator):
             # Randomize object positions for each render
             for obj in data_collection.objects:
                 obj.location = Vector((
-                    random.uniform(-5, 5),
-                    random.uniform(-5, 5),
+                    random.uniform(-2, 2),
+                    random.uniform(-2, 2),
                     random.uniform(1, 5)
                 ))
 
@@ -165,15 +177,19 @@ class OBJECT_OT_generate_images(Operator):
             #bpy.context.space_data.context = 'TOOL'
             #bpy.context.space_data.context = 'RENDER'
             bpy.context.scene.render.use_freestyle = True
+            #bpy.context.space_data.context = 'VIEW_LAYER'
+            bpy.context.scene.view_layers["ViewLayer"].use_solid = False
 
-            filepath = os.path.join(trainx_path, f"render_{step:03d}.png")
+            filepath = os.path.join(trainy_path, f"render_{step:03d}.png")
             scene.render.filepath = filepath
             # Perform the render and save the image
             bpy.ops.render.render(write_still=True)
 
 
             bpy.context.scene.render.use_freestyle = False
-            filepath = os.path.join(trainy_path, f"render_{step:03d}.png")
+            #bpy.context.space_data.context = 'VIEW_LAYER'
+            bpy.context.scene.view_layers["ViewLayer"].use_solid = True
+            filepath = os.path.join(trainx_path, f"render_{step:03d}.png")
             scene.render.filepath = filepath
             # Perform the render and save the image
             bpy.ops.render.render(write_still=True)
