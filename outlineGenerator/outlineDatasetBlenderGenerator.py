@@ -102,7 +102,7 @@ class OBJECT_OT_generate_data(Operator):
                     # Add the object to the scene
                     add_func()
                     obj = context.active_object
-                    bpy.ops.transform.resize(value=(0.4783816, 0.4783816, 0.4783816), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
+                    bpy.ops.transform.resize(value=(0.0783816, 0.0783816, 0.0783816), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
                     bpy.ops.object.material_slot_add()
                     mat = bpy.data.materials.new("My Material")
                     mat.diffuse_color = get_random_color()
@@ -150,26 +150,45 @@ class OBJECT_OT_generate_images(Operator):
         train_path = os.path.join(scene.photo_path, "train")
         if not os.path.exists(train_path):
             os.makedirs(train_path)
-        trainx_path = os.path.join(train_path, "x")
-        if not os.path.exists(trainx_path):
-            os.makedirs(trainx_path)
-        trainy_path = os.path.join(train_path, "y")
-        if not os.path.exists(trainy_path):
-            os.makedirs(trainy_path)
+        test_path = os.path.join(scene.photo_path, "test")
+        if not os.path.exists(test_path):
+            os.makedirs(test_path)
+        val_path = os.path.join(scene.photo_path, "val")
+        if not os.path.exists(val_path):
+            os.makedirs(val_path)
+        train_edge_path = os.path.join(scene.photo_path, "train_edge")
+        if not os.path.exists(train_edge_path):
+            os.makedirs(train_edge_path)
+        test_edge_path = os.path.join(scene.photo_path, "test_edge")
+        if not os.path.exists(test_edge_path):
+            os.makedirs(test_edge_path)
+        val_edge_path = os.path.join(scene.photo_path, "val_edge")
+        if not os.path.exists(val_edge_path):
+            os.makedirs(val_edge_path)        
 
+        testTrainRatio = 0.2
+        testValRatio = 0.02
         # Check if required objects exist
         if not data_collection or not camera:
             self.report({'ERROR'}, "Data collection or camera not found")
             return {'CANCELLED'}
-
+        trainy_path = train_edge_path
+        trainx_path = train_path
         # Generate images for the specified number of steps
         for step in range(scene.number_of_steps):
+            if step > (scene.number_of_steps - int(scene.number_of_steps * testTrainRatio) - int(scene.number_of_steps * testValRatio)):
+                    trainy_path = test_edge_path
+                    trainx_path = test_path
+            if step > (scene.number_of_steps - int(scene.number_of_steps * testValRatio)):
+                    trainy_path = val_edge_path
+                    trainx_path = val_path
+                                        
             # Randomize object positions for each render
             for obj in data_collection.objects:
                 obj.location = Vector((
                     random.uniform(-2, 2),
                     random.uniform(-2, 2),
-                    random.uniform(1, 5)
+                    random.uniform(1, 3)
                 ))
 
             # Set up the render
@@ -178,19 +197,24 @@ class OBJECT_OT_generate_images(Operator):
             #bpy.context.space_data.context = 'TOOL'
             #bpy.context.space_data.context = 'RENDER'
             bpy.context.scene.render.use_freestyle = True
+            bpy.context.scene.render.line_thickness = 0.2
+            bpy.data.objects["Sun"].hide_render = False
+            bpy.data.worlds["World"].node_tree.nodes["Emission"].inputs[0].default_value = (0, 0, 0, 1)
             #bpy.context.space_data.context = 'VIEW_LAYER'
             bpy.context.scene.view_layers["ViewLayer"].use_solid = False
 
-            filepath = os.path.join(trainy_path, f"render_{step:03d}.png")
+            filepath = os.path.join(trainy_path, f"{scene.name_suffix}_{step:03d}.png")
             scene.render.filepath = filepath
             # Perform the render and save the image
             bpy.ops.render.render(write_still=True)
 
 
             bpy.context.scene.render.use_freestyle = False
+            bpy.data.objects["Sun"].hide_render = True
+            bpy.data.worlds["World"].node_tree.nodes["Emission"].inputs[0].default_value = (1, 1, 1, 1)
             #bpy.context.space_data.context = 'VIEW_LAYER'
             bpy.context.scene.view_layers["ViewLayer"].use_solid = True
-            filepath = os.path.join(trainx_path, f"render_{step:03d}.png")
+            filepath = os.path.join(trainx_path, f"{scene.name_suffix}_{step:03d}.png")
             scene.render.filepath = filepath
             # Perform the render and save the image
             bpy.ops.render.render(write_still=True)
@@ -221,6 +245,7 @@ class VIEW3D_PT_devin_generator(Panel):
         layout.operator("object.generate_data", text="Generate Data")
         layout.operator("object.add_camera", text="Add Camera")
         layout.prop(scene, "photo_path")
+        layout.prop(scene, "name_suffix")
         layout.prop(scene, "number_of_steps")
         layout.operator("object.generate_images", text="Generate")
 
@@ -254,6 +279,11 @@ def register():
         subtype='DIR_PATH',
         description="Path to save rendered images"
     )
+    bpy.types.Scene.name_suffix = StringProperty(
+        name="name suffix",
+        default="dataset",
+        description="suffix add to file name to avoid overvriting"
+    )
     bpy.types.Scene.number_of_steps = IntProperty(
         name="Number of Steps",
         default=10,
@@ -272,6 +302,7 @@ def unregister():
     # Remove custom properties
     del bpy.types.Scene.number_of_objects
     del bpy.types.Scene.photo_path
+    del bpy.types.Scene.name_suffix
     del bpy.types.Scene.number_of_steps
 
 # This allows you to run the script directly from Blender's Text editor
