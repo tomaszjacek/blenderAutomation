@@ -76,7 +76,28 @@ class OBJECT_OT_generate_data(Operator):
     def execute(self, context):
         scene = context.scene
 
+        #add one hundrerd materials with diferent transparency step alpha = 0.01
+        #make dict with present materials names
+        mat_dict = {mat.name: i for i, mat in enumerate(bpy.data.materials)}
+        #index_list = list()
+        #print(mat_dict.keys())
+        value = 0.01
+        #add new material only if not exists
+        for n in range(1, 101):
+            ext = str("%f" % value)
+            mat_name = "transparentMaterial_"+ext
+            if mat_name in mat_dict.keys():
+                print(mat_name + " juzjest " )
+                #index_list.append(mat_name)
+            else:
+                material = bpy.data.materials.new(name=mat_name)
+                material.use_nodes = True
+                bpy.data.materials[mat_name].node_tree.nodes["Principled BSDF"].inputs[4].default_value = value
+                
 
+                #print(mat_name + " dokladam" )
+                #index_list.append(mat_name)
+            value += 0.01
 
 
         if bpy.data.collections["data"]:
@@ -110,11 +131,11 @@ class OBJECT_OT_generate_data(Operator):
                     obj = context.active_object
                     bpy.ops.transform.resize(value=(0.0783816, 0.0783816, 0.0783816), orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False, snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST', use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
                     bpy.ops.object.material_slot_add()
-                    mat = bpy.data.materials['xRayShader_v2']
+                    #mat = bpy.data.materials['xRayShader_v2']
                     #mat.diffuse_color = get_random_color()
                     #obj.data.materials.append(mat)
                     
-                    obj.material_slots[0].material = mat
+                    #obj.material_slots[0].material = mat
                     # Ensure the object is linked to the scene collection
                     if obj.name not in scene.collection.objects:
                         scene.collection.objects.link(obj)
@@ -150,6 +171,14 @@ class OBJECT_OT_generate_images(Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
+        #mat_dict = {mat.name: i for i, mat in enumerate(bpy.data.materials)}
+        index_list = list()
+        value = 0.01
+        for n in range(1, 101):
+            ext = str("%f" % value)
+            mat_name = "transparentMaterial_"+ext
+            index_list.append(mat_name)
+            value+=0.01
         scene = context.scene
         data_collection = bpy.data.collections.get("data")
         camera = bpy.data.objects.get("Camera")
@@ -197,6 +226,11 @@ class OBJECT_OT_generate_images(Operator):
                     random.uniform(-2, 2),
                     random.uniform(1, 3)
                 ))
+                random_int = random.randint(0,len(index_list)-1)
+                print(str(random_int)+" "+ str(len(index_list)))
+                obj.material_slots[0].material = bpy.data.materials[index_list[random_int]]
+                bpy.data.materials[index_list[random_int]].node_tree.nodes["Principled BSDF"].inputs[27].default_value = 0.05
+
 
             # Set up the render
             scene.camera = camera
